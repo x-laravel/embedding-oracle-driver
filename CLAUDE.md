@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with th
 Oracle 26ai native vector driver for `x-laravel/embedding`. Handles both similarity search and vector storage using Oracle's native VECTOR type.
 
 - **Package name:** `x-laravel/embedding-oracle-driver` — **Namespace:** `XLaravel\Embedding\Driver\Oracle`
-- PHP `^8.3`, Laravel (illuminate) `^12.0|^13.0`, `x-laravel/embedding ^1.0`
+- PHP `^8.3`, Laravel (illuminate) `^12.0|^13.0`, `x-laravel/embedding ^1.2`
 - Oracle Database 26ai (Free or Enterprise)
 - Dev: Orchestra Testbench `^10.0|^11.0`, PHPUnit `^11.0|^12.0`, yajra/laravel-oci8 `^12.0`
 
@@ -35,7 +35,8 @@ Tests require a live Oracle 26ai instance — the `oracle` service in `docker-co
 |------|----------------|
 | `OracleDriver.php` | Implements `SimilarityDriver`. Builds `VECTOR_DISTANCE(vector, TO_VECTOR(...), COSINE)` query, loads models via `findMany()`, sets `similarity_score` on each. |
 | `OracleVectorStore.php` | Implements `VectorStore`. Writes embeddings via `MERGE INTO ... USING DUAL` with `TO_VECTOR(?, {dimensions}, FLOAT32)`. |
-| `OracleEmbeddingServiceProvider.php` | `register()` binds `VectorStore` → `OracleVectorStore`. `boot()` registers `oracle` similarity driver, loads migration, publishes under `embedding-oracle-migrations` tag. |
+| `OracleVectorStoreMetrics.php` | Implements `VectorStoreMetrics`. Returns `Embedding::count()` for `rows`; aggregates `user_segments` for the byte fields, splitting `TABLE` vs. `INDEX%` segments into `data_bytes` / `index_bytes`. LOB segments are excluded (their `segment_name` is synthetic). Falls back to `null` byte fields if the user lacks `SELECT` on `user_segments`. |
+| `OracleEmbeddingServiceProvider.php` | `register()` binds `VectorStore` → `OracleVectorStore` and `VectorStoreMetrics` → `OracleVectorStoreMetrics`. `boot()` registers `oracle` similarity driver, loads migration, publishes under `embedding-oracle-migrations` tag. |
 
 ## Test Structure (`tests/`)
 
@@ -51,7 +52,8 @@ Tests require a live Oracle 26ai instance — the `oracle` service in `docker-co
 
 ```
 register()
-  └─► app->bind(VectorStore::class, OracleVectorStore::class)
+  ├─► app->bind(VectorStore::class, OracleVectorStore::class)
+  └─► app->bind(VectorStoreMetrics::class, OracleVectorStoreMetrics::class)
 
 boot()
   ├─► loadMigrationsFrom(...)

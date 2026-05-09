@@ -4,6 +4,7 @@ namespace XLaravel\Embedding\Driver\Oracle;
 
 use Illuminate\Support\ServiceProvider;
 use XLaravel\Embedding\Contracts\VectorStore;
+use XLaravel\Embedding\Contracts\VectorStoreMetrics;
 use XLaravel\Embedding\SimilarityManager;
 
 class OracleEmbeddingServiceProvider extends ServiceProvider
@@ -11,6 +12,7 @@ class OracleEmbeddingServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->bind(VectorStore::class, OracleVectorStore::class);
+        $this->app->bind(VectorStoreMetrics::class, OracleVectorStoreMetrics::class);
     }
 
     public function boot(): void

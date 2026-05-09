@@ -2,9 +2,11 @@
 
 namespace XLaravel\Embedding\Driver\Oracle\Tests\Feature;
 
-use XLaravel\Embedding\SimilarityManager;
+use XLaravel\Embedding\Contracts\VectorStoreMetrics;
 use XLaravel\Embedding\Driver\Oracle\OracleDriver;
+use XLaravel\Embedding\Driver\Oracle\OracleVectorStoreMetrics;
 use XLaravel\Embedding\Driver\Oracle\Tests\TestCase;
+use XLaravel\Embedding\SimilarityManager;
 
 class OracleEmbeddingServiceProviderTest extends TestCase
 {
@@ -39,5 +41,24 @@ class OracleEmbeddingServiceProviderTest extends TestCase
         $manager = app(SimilarityManager::class);
 
         $this->assertSame($manager->driver('oracle'), $manager->driver('oracle'));
+    }
+
+    public function test_it_binds_oracle_vector_store_metrics(): void
+    {
+        $this->assertInstanceOf(OracleVectorStoreMetrics::class, app(VectorStoreMetrics::class));
+    }
+
+    public function test_metrics_snapshot_reports_rows_and_byte_sizes(): void
+    {
+        \XLaravel\Embedding\Driver\Oracle\Tests\Fixtures\Models\Post::create([
+            'title' => 'Laravel',
+            'body' => 'PHP Framework',
+        ]);
+
+        $snapshot = app(VectorStoreMetrics::class)->snapshot();
+
+        $this->assertSame(1, $snapshot['rows']);
+        $this->assertIsInt($snapshot['bytes']);
+        $this->assertGreaterThan(0, $snapshot['bytes']);
     }
 }
