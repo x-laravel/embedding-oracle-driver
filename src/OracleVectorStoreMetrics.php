@@ -17,10 +17,16 @@ class OracleVectorStoreMetrics implements VectorStoreMetrics
         $indexBytes = null;
 
         try {
-            // Oracle stores LOB segments under synthetic SYS_LOB$ names that
-            // do not match the table name, so this aggregate covers TABLE +
-            // INDEX segments only — sufficient for VECTOR(n, FLOAT32) which
-            // Oracle 26ai stores inline when the size fits the row.
+            // Index segments use their own segment_name (PK / unique index
+            // names — e.g. SYS_C00xxxx or "embeddings_..._unique"), not the
+            // table name, so user_segments.segment_name = '<table>' would
+            // miss them and report index_bytes = 0. Resolve the index names
+            // through user_indexes first, then aggregate user_segments for
+            // TABLE rows whose name matches the table and INDEX% rows whose
+            // name appears in that index list. LOB segments use synthetic
+            // SYS_LOB$ names and stay excluded — VECTOR(n, FLOAT32) is
+            // stored inline in Oracle 23ai/26ai when the row fits.
+            $table = config('embedding.database.table');
             $row = DB::connection(config('embedding.database.connection'))
                 ->selectOne(
                     "SELECT
@@ -28,8 +34,12 @@ class OracleVectorStoreMetrics implements VectorStoreMetrics
                         SUM(CASE WHEN segment_type LIKE 'INDEX%' THEN bytes ELSE 0 END) AS index_bytes,
                         SUM(bytes) AS total_bytes
                      FROM user_segments
-                     WHERE segment_name = UPPER(?)",
-                    [config('embedding.database.table')]
+                     WHERE (segment_name = UPPER(?) AND segment_type = 'TABLE')
+                        OR (segment_type LIKE 'INDEX%'
+                            AND segment_name IN (
+                                SELECT index_name FROM user_indexes WHERE table_name = UPPER(?)
+                            ))",
+                    [$table, $table]
                 );
 
             if ($row !== null) {

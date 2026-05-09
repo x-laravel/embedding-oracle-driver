@@ -59,6 +59,12 @@ class OracleEmbeddingServiceProviderTest extends TestCase
 
         $this->assertSame(1, $snapshot['rows']);
         $this->assertIsInt($snapshot['bytes']);
+        $this->assertIsInt($snapshot['data_bytes']);
+        $this->assertIsInt($snapshot['index_bytes']);
         $this->assertGreaterThan(0, $snapshot['bytes']);
+        // PRIMARY KEY + the (embeddable_type, embeddable_id, slot) unique
+        // index resolve through user_indexes.table_name = 'EMBEDDINGS', so
+        // index_bytes must be greater than zero on a freshly-migrated table.
+        $this->assertGreaterThan(0, $snapshot['index_bytes']);
     }
 }
