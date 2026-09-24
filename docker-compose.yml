@@ -1,0 +1,79 @@
+services:
+  oracle:
+    image: gvenzl/oracle-free:23.26.1
+    environment:
+      - ORACLE_PASSWORD=oracle
+      - APP_USER=test_user
+      - APP_USER_PASSWORD=test_password
+    ports:
+      - "1521:1521"
+    healthcheck:
+      test: ["CMD", "healthcheck.sh"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
+  php83:
+    build:
+      context: .
+      args:
+        PHP_VERSION: "8.3"
+    volumes:
+      - .:/app
+      - vendor83:/app/vendor
+    environment:
+      - DB_HOST=oracle
+      - DB_PORT=1521
+      - DB_SERVICE_NAME=FREEPDB1
+      - DB_USERNAME=test_user
+      - DB_PASSWORD=test_password
+    depends_on:
+      oracle:
+        condition: service_healthy
+    entrypoint: ["sh", "-c", "composer install --no-interaction && vendor/bin/phpunit"]
+    profiles: ["php83"]
+
+  php84:
+    build:
+      context: .
+      args:
+        PHP_VERSION: "8.4"
+    volumes:
+      - .:/app
+      - vendor84:/app/vendor
+    environment:
+      - DB_HOST=oracle
+      - DB_PORT=1521
+      - DB_SERVICE_NAME=FREEPDB1
+      - DB_USERNAME=test_user
+      - DB_PASSWORD=test_password
+    depends_on:
+      oracle:
+        condition: service_healthy
+    entrypoint: ["sh", "-c", "composer install --no-interaction && vendor/bin/phpunit"]
+    profiles: ["php84"]
+
+  php85:
+    build:
+      context: .
+      args:
+        PHP_VERSION: "8.5"
+    volumes:
+      - .:/app
+      - vendor85:/app/vendor
+    environment:
+      - DB_HOST=oracle
+      - DB_PORT=1521
+      - DB_SERVICE_NAME=FREEPDB1
+      - DB_USERNAME=test_user
+      - DB_PASSWORD=test_password
+    depends_on:
+      oracle:
+        condition: service_healthy
+    entrypoint: ["sh", "-c", "composer install --no-interaction && vendor/bin/phpunit"]
+    profiles: ["php85"]
+
+volumes:
+  vendor83:
+  vendor84:
+  vendor85:
